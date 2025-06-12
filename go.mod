@@ -1,3 +1,3 @@
-module github.com/Krishnendude-2005/golang
+module assignment1go
 
-go 1.24.4
+go 1.24
