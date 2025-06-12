@@ -1,8 +1,0 @@
-INFO Application started
-WARNING Disk usage is above 80%
-INFO User logged in
-ERROR Failed to connect to database
-INFO Attempting reconnect
-WARNING Low memory warning
-ERROR Could not write to log file
-INFO Shutdown initiated
