@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-//Bank Account Structure
+// Bank Account Structure
 type BankAccount struct {
 	owner   string
 	balance float64
