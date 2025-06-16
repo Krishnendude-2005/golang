@@ -13,6 +13,15 @@ type BankAccount struct {
 func main() {
 	fmt.Println("Welcome to Bank Account System")
 
+	//scanning initial values for bank account holder and the balance
+	fmt.Println("Enter Initial Details for Bank Account Holder")
+	var name string
+	var balance float64
+	fmt.Println("Enter name : ")
+	fmt.Scan(&name)
+	fmt.Println("Enter balance: ")
+	fmt.Scan(&balance)
+
 	//giving user choices to perfom operations
 	fmt.Println("Choose any of the Operations available : \n 1.Display Balance \n 2.Deposit Amount \n 3.Withdraw Amount")
 
@@ -23,8 +32,8 @@ func main() {
 
 	//creating instance of bankaccount structure
 	bankaccount := &BankAccount{
-		owner:   "Krishnendu De",
-		balance: 30000,
+		owner:   name,
+		balance: balance,
 	}
 
 	for i := range testcases {
