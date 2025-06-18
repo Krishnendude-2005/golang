@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-type OtpSupport interface {
+type OTPSupport interface {
 	generateOtp() string
 }
 
@@ -78,7 +78,7 @@ func main() {
 	fmt.Scan(&amount)
 
 	for _, method := range methods {
-		if otpMethod, ok := method.(OtpSupport); ok == true { //first assigning value to ok , then validating it's if condition
+		if otpMethod, ok := method.(OTPSupport); ok == true { //first assigning value to ok , then validating it's if condition
 			fmt.Println(otpMethod.generateOtp())
 		}
 
