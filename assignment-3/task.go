@@ -46,12 +46,15 @@ func CompleteTask(id int, tm *TaskManager) {
 	fmt.Println("Task ID not found!")
 }
 
+var PendingTasks = []Task{}
+
 func ListPendingTasks(tm *TaskManager) []Task {
-	var pending []Task
+	fmt.Println("\nPending Tasks:")
 	for _, t := range tm.Tasks {
 		if !t.Status {
-			pending = append(pending, t)
+			fmt.Printf("%d - %s\n", t.ID, t.Description)
+			PendingTasks = append(PendingTasks, t)
 		}
 	}
-	return pending
+	return PendingTasks
 }
