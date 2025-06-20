@@ -171,12 +171,13 @@ func main() {
 	//fmt.Println("Task Manager using WEB SERVER")
 	tm := TaskManager{Tasks: make([]Task, 0), GetNextID: IDGenerator()}
 
-	http.HandleFunc("GET /task", tm.TaskHandler)
-	http.HandleFunc("GET /task/{id}", tm.FindTaskHandler)
-	http.HandleFunc("/GET task/complete/{id}", tm.CompleteTaskHandler)
-	http.HandleFunc("POST /task/add/{description}", tm.PostTaskhandler)
-	http.HandleFunc("POST /task/update/{id}/{description}", tm.PutTaskHandler)
-	http.HandleFunc("GET /task/delete/{id}", tm.DeleteTaskHandler)
+	http.HandleFunc(" /task", tm.TaskHandler)
+	http.HandleFunc(" /task/{id}", tm.FindTaskHandler)
+	http.HandleFunc(" task/complete/{id}", tm.CompleteTaskHandler)
+	http.HandleFunc(" /task/add/{description}", tm.PostTaskhandler)
+	http.HandleFunc(" /task/update/{id}/{description}", tm.PutTaskHandler)
+	http.HandleFunc(" /task/delete/{id}", tm.DeleteTaskHandler)
 
+	fmt.Print("Server Running")
 	http.ListenAndServe(":8080", nil)
 }
