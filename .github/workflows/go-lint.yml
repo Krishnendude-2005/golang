@@ -18,10 +18,8 @@ jobs:
       - name: Install Go Dependencies
         run: go mod tidy
 
-      - name: Install GO Lint
-        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-
-      - name: Run The Go Lint
-        run: golangci-lint run ./assignment-8
-
-
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v2.1.6
+          working-directory: ./assignment-8
