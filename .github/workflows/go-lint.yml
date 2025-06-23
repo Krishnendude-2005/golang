@@ -3,7 +3,7 @@ name: Build and Deploy Go App
 on:
   push:
     branches:
-      - http_test_assigment_4
+      - main
 
 jobs:
   build:
@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: assignment_4_task_http/hello
+        working-directory: assignment-9
 
     steps:
       - name: Checkout code
@@ -28,4 +28,4 @@ jobs:
         uses: golangci/golangci-lint-action@v7
         with:
           version: v2.1.6
-          working-directory: assignment_4_task_http/hello
+          working-directory: assignment-9
