@@ -15,7 +15,11 @@ jobs:
         with:
           go-version: '1.22'
 
+      - name: Print Go Version
+        run: go version
+
       - name: Install Go Dependencies
+        working-directory: ./assignment-8
         run: go mod tidy
 
       - name: Run golangci-lint
