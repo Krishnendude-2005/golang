@@ -1,22 +1,31 @@
-name: GO LINT CHECK
+name: Build and Deploy Go App
+
 on:
   push:
-    branches: ["main"]
+    branches:
+      - http_test_assigment_4
 
 jobs:
-  lint:
+  build:
+    name: krishnendu
     runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+    defaults:
+      run:
+        working-directory: assignment_4_task_http/hello
 
-      - name: Set Up Go
-        uses: actions/setup-go@v5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
         with:
           go-version: '1.22'
-
-      - name: Install GO Lint
-        run: go install golang.org/x/lint/golint@latest
-
-      - name: Run The Go Lint
-        run: golint ./assignment1go
+      - name: Build Go Binary
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o main
+      - name: Check Linters for run
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.1.6
+          working-directory: assignment_4_task_http/hello
