@@ -255,7 +255,13 @@ func (tm *TaskManager) FindTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, t := range tm.Tasks {
 		if t.ID == id {
-			fmt.Fprintf(w, "Found Task: %d - %s\n", t.ID, t.Description)
+			w.WriteHeader(http.StatusOK)
+			val, er := w.Write([]byte("Task Found"))
+			if er != nil {
+				w.WriteHeader(http.StatusBadRequest)
+			} else {
+				fmt.Println(val)
+			}
 			return
 		}
 	}
