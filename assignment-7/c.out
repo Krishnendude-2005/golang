@@ -1,0 +1,18 @@
+mode: set
+assignment-7/main.go:32.48,35.2 2 1
+assignment-7/main.go:38.44,40.2 1 1
+assignment-7/main.go:43.41,45.2 1 1
+assignment-7/main.go:48.42,51.2 1 1
+assignment-7/main.go:52.35,54.2 1 1
+assignment-7/main.go:56.13,66.19 6 0
+assignment-7/main.go:66.19,68.3 1 0
+assignment-7/main.go:70.2,78.19 5 0
+assignment-7/main.go:78.19,80.3 1 0
+assignment-7/main.go:82.2,90.16 5 0
+assignment-7/main.go:90.16,92.3 1 0
+assignment-7/main.go:94.2,108.16 6 0
+assignment-7/main.go:108.16,110.3 1 0
+assignment-7/main.go:112.2,112.33 1 0
+assignment-7/main.go:112.33,114.47 1 0
+assignment-7/main.go:114.47,116.4 1 0
+assignment-7/main.go:118.3,118.34 1 0

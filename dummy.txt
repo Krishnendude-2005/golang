@@ -1,0 +1,48 @@
+
+//func GreetHandler(w http.ResponseWriter, r *http.Request) {
+//	name := r.URL.Query().Get("name")
+//	salary := r.URL.Query().Get("salary")
+//	if name == "" {
+//		name = "Guest"
+//	}
+//	fmt.Fprintln(w, "Hello", name, "with salary", salary)
+//}
+
+//	func PostHandler(w http.ResponseWriter, r *http.Request) {
+//		if r.Method != http.MethodPost {
+//			http.Error(w, "Only Post Method is Allowed", http.StatusMethodNotAllowed)
+//		}
+//
+//		r.ParseForm()
+//		name := r.FormValue("name")
+//		//salary := r.FormValue("salary")
+//		fmt.Fprintln(w, "Hello", name)
+//	}
+
+//http.HandleFunc("/greet", GreetHandler)
+	//http.HandleFunc("/post", PostHandler)
+
+
+
+	//func (tm *TaskManager) addTaskHandler(w http.ResponseWriter, r *http.Request) {
+    //	if r.Method != http.MethodPost {
+    //		http.Error(w, "Only POST allowed", http.StatusMethodNotAllowed)
+    //		return
+    //	}
+    //
+    //	desc := r.URL.Query().Get("desc")
+    //	if desc == "" {
+    //		http.Error(w, "Missing description", http.StatusBadRequest)
+    //		return
+    //	}
+    //
+    //	t := Task{
+    //		ID:          tm.GetNextID(),
+    //		Description: strings.TrimSpace(desc),
+    //		Status:      false,
+    //	}
+    //	tm.Tasks = append(tm.Tasks, t)
+    //	//fmt.Fprintln(w, "Added Task:", t.ID, "-", t.Description)
+    //	w.Write([]byte("Task Added"))
+    //	w.WriteHeader(200)
+    //}
