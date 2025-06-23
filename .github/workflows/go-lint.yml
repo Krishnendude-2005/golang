@@ -11,15 +11,14 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set Up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: '1.21'
+          go-version: '1.22'
 
       - name: Install GO Lint
-        run: go mod download
+        run: go install golang.org/x/lint/golint@latest
 
       - name: Run The Go Lint
-        run: golangci/golangci-lint-action@v7
-        with:
-          version: v2.1.6
+        run: golint ./assignment1go
+
 
