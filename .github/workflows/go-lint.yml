@@ -20,5 +20,6 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:
-          version: v1.59.0   # latest stable version that supports Go 1.22
-          working-directory: assignment1go/assignment-8
+          version: v1.59.0
+          working-directory: assignment-8
+
