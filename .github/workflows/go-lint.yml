@@ -1,5 +1,4 @@
 name: GO LINT CHECK
-
 on:
   push:
     branches: ["main"]
@@ -7,18 +6,20 @@ on:
 jobs:
   lint:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Set Up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v4
         with:
-          go-version: '1.24'
+          go-version: '1.21'
 
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v3
+      - name: Install GO Lint
+        run: go mod download
+
+      - name: Run The Go Lint
+        run: golangci/golangci-lint-action@v7
         with:
-          version: v1.59.0
-          working-directory: assignment-8
+          version: v2.1.6
+
