@@ -1,20 +1,21 @@
 package main
 
 import (
+	"assignment-9"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
-var tm *TaskManager
+var tm *assignment_9.TaskManager
 
 func setup() {
-	tm = &TaskManager{
-		Tasks:     []Task{},
-		GetNextID: IDGenerator(), // assuming this returns a func() int
+	tm = &assignment_9.TaskManager{
+		Tasks:     []assignment_9.Task{},
+		GetNextID: assignment_9.IDGenerator(), // assuming this returns a func() int
 	}
-	tm.Tasks = append(tm.Tasks, Task{ID: 1, Description: "Task 1", Status: false})
-	tm.Tasks = append(tm.Tasks, Task{ID: 2, Description: "Task 2", Status: false})
+	tm.Tasks = append(tm.Tasks, assignment_9.Task{ID: 1, Description: "Task 1", Status: false})
+	tm.Tasks = append(tm.Tasks, assignment_9.Task{ID: 2, Description: "Task 2", Status: false})
 }
 
 func TestTaskHandler(t *testing.T) {
