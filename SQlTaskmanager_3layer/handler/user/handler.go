@@ -2,18 +2,21 @@ package user
 
 import (
 	"SQLTaskmanager_3layer/models"
-	servicePkg "SQLTaskmanager_3layer/service/user"
 	"encoding/json"
 	"io"
 	"net/http"
 	"strconv"
 )
 
+type Service interface {
+	Create(user models.User) (models.User, error)
+	GetById(id int) (models.User, error)
+}
 type Handler struct {
-	service servicePkg.Service
+	service Service
 }
 
-func New(service servicePkg.Service) *Handler {
+func New(service Service) *Handler {
 	return &Handler{service: service}
 }
 

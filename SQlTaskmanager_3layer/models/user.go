@@ -3,8 +3,8 @@ package models
 import "fmt"
 
 type User struct {
-	ID       int    `json:"id"`
-	TaskName string `json:"task_name"`
+	ID       int    `json:"ID"`
+	TaskName string `json:"TaskName"`
 }
 
 func (u User) Validate() error {

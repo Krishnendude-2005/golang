@@ -22,50 +22,26 @@ func main() {
 	}
 	defer db.Close()
 
-	// Task Layers
-	tStore := taskStore.New(db)
-	tService := taskService.New(tStore)
-	tHandler := taskHandler.New(tService)
+	// Task Layers - store, service, handler
+	tStore := taskStore.New(db)           // Store depends on DB.
+	tService := taskService.New(tStore)   // Service depends on Store.
+	tHandler := taskHandler.New(tService) // Handlers depends on Service.
 
-	// User Layers
+	// User Layers - store, service, handler
 	uStore := userStore.New(db)
 	uService := userService.New(uStore)
 	uHandler := userHandler.New(uService)
 
-	// Task Routes
-	http.HandleFunc("/task", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		tHandler.Create(w, r)
-	})
-
-	http.HandleFunc("/task/find", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		tHandler.GetById(w, r)
-	})
-
-	// User Routes
-	http.HandleFunc("/user", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		uHandler.Create(w, r)
-	})
-
-	http.HandleFunc("/user/find", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			w.WriteHeader(http.StatusMethodNotAllowed)
-			return
-		}
-		uHandler.GetByID(w, r)
-	})
-
+	// Task Handlers.
+	http.HandleFunc("/task/add", tHandler.Create)
+	http.HandleFunc("/task/user", tHandler.GetByUserID)
+	http.HandleFunc("/task/delete", tHandler.Delete)
+	http.HandleFunc("/task/update", tHandler.Update)
+	http.HandleFunc("/task/all", tHandler.GetAll)
+	//User Handlers.
+	http.HandleFunc("/user/add", uHandler.Create)
+	http.HandleFunc("/user/find", uHandler.GetByID)
+	// Server Running.
 	fmt.Println("Server is running on :8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }

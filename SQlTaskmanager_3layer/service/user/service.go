@@ -2,19 +2,18 @@ package user
 
 import (
 	"SQLTaskmanager_3layer/models"
-	storePkg "SQLTaskmanager_3layer/store/user"
 )
 
-type Service interface {
+type Store interface {
 	Create(user models.User) (models.User, error)
 	GetById(id int) (models.User, error)
 }
 
 type service struct {
-	store storePkg.Store
+	store Store
 }
 
-func New(store storePkg.Store) Service {
+func New(store Store) *service {
 	return &service{store: store}
 }
 
