@@ -7,7 +7,7 @@ import (
 type Store interface {
 	Create(task models.Task, userID int) (models.Task, error)
 	GetById(userID int) ([]models.Task, error)
-	DeleteTaskById(id int) error
+	DeleteTaskById(id int) (int, error)
 	Update(task models.Task, taskID int) (models.Task, error)
 	GetAll() ([]models.Task, error)
 }
@@ -32,7 +32,7 @@ func (s *service) GetById(userID int) ([]models.Task, error) {
 	return s.store.GetById(userID)
 }
 
-func (s *service) Delete(id int) error {
+func (s *service) DeleteTaskById(id int) (int, error) {
 	return s.store.DeleteTaskById(id)
 }
 

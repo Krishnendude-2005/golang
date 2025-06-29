@@ -28,8 +28,6 @@ func (s *store) Create(user models.User) (models.User, error) {
 	if errSms != nil {
 		return models.User{}, err
 	}
-	//id, _ := res.LastInsertId()
-	//user.ID = int(id)
 	return user, nil
 }
 
@@ -44,28 +42,3 @@ func (s *store) GetById(id int) (models.User, error) {
 	}
 	return user, nil
 }
-
-//type mockStore struct {
-//	// empty
-//}
-//
-////func (m *mockStore) GetById(id int) (models.User, error) {
-////	if id == 1 {
-////		return models.User{
-////			ID:       1,
-////			TaskName: "New Task 1",
-////		}, nil
-////	}
-////
-////	if id == 2 {
-////		return models.User{
-////			ID:       2,
-////			TaskName: "New Task 2",
-////		}, nil
-////	}
-////	idStr := strconv.Itoa(id)
-////	if idStr == "abc" {
-////		return models.User{}, errors.New("id cannot be string")
-////	}
-////	return models.User{}, errors.New("failed")
-////}

@@ -25,28 +25,44 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Failed to read request body"))
+		_, errSms := w.Write([]byte("Failed to read request body"))
+		if errSms != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 
 	var user models.User
 	if err := json.Unmarshal(body, &user); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Invalid JSON"))
+		_, errMe := w.Write([]byte("Invalid JSON"))
+		if errMe != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 
 	created, err := h.service.Create(user)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("User creation failed: " + err.Error()))
+		_, errMsg := w.Write([]byte("User creation failed: " + err.Error()))
+		if errMsg != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 
 	respBytes, _ := json.Marshal(created)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(respBytes)
+	_, errorSms := w.Write(respBytes)
+	if errorSms != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }
 
 // GetByID handles GET /user/find?id=...
@@ -54,26 +70,42 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	if idStr == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Missing user ID"))
+		_, err := w.Write([]byte("Missing user ID"))
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Invalid user ID"))
+		_, errorMsg := w.Write([]byte("Invalid user ID"))
+		if errorMsg != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 
 	user, err := h.service.GetById(id)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("User not found"))
+		_, errSms := w.Write([]byte("User not found"))
+		if errSms != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 
 	respBytes, _ := json.Marshal(user)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(respBytes)
+	_, errMsg := w.Write(respBytes)
+	if errMsg != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }

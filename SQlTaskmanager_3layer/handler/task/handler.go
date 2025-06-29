@@ -3,6 +3,7 @@ package task
 import (
 	"SQLTaskmanager_3layer/models"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -11,7 +12,7 @@ import (
 type Service interface {
 	Create(task models.Task, userID int) (models.Task, error)
 	GetById(userID int) ([]models.Task, error)
-	Delete(id int) error
+	DeleteTaskById(id int) (int, error)
 	Update(task models.Task, taskID int) (models.Task, error)
 	GetAll() ([]models.Task, error)
 }
@@ -44,7 +45,11 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	jsonResp, _ := json.Marshal(created)
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResp)
+	val, err := w.Write(jsonResp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+	fmt.Println("bytes used", val)
 }
 
 func (h *Handler) GetByUserID(w http.ResponseWriter, r *http.Request) {
@@ -63,10 +68,14 @@ func (h *Handler) GetByUserID(w http.ResponseWriter, r *http.Request) {
 
 	jsonResp, _ := json.Marshal(tasks)
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResp)
+	val, err := w.Write(jsonResp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	fmt.Println("bytes used", val)
 }
 
-func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DeleteTaskById(w http.ResponseWriter, r *http.Request) {
 	idStr := r.URL.Query().Get("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
@@ -74,13 +83,17 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.service.Delete(id); err != nil {
+	if _, err := h.service.DeleteTaskById(id); err != nil {
 		http.Error(w, "Delete failed", http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Task deleted"))
+	val, err := w.Write([]byte("Task deleted"))
+	if err != nil {
+		http.Error(w, "Delete failed", http.StatusInternalServerError)
+	}
+	fmt.Println("bytes used", val)
 }
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
@@ -111,7 +124,13 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 	jsonResp, _ := json.Marshal(updated)
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResp)
+	val, err := w.Write(jsonResp)
+	if err != nil {
+		http.Error(w, "Failed writing body", http.StatusInternalServerError)
+	} else {
+		fmt.Println("bytes used", val)
+	}
+
 }
 
 func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
@@ -123,5 +142,9 @@ func (h *Handler) GetAll(w http.ResponseWriter, r *http.Request) {
 
 	jsonResp, _ := json.Marshal(tasks)
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResp)
+	val, err := w.Write(jsonResp)
+	if err != nil {
+		http.Error(w, "Failed writing body", http.StatusInternalServerError)
+	}
+	fmt.Println("bytes used", val)
 }

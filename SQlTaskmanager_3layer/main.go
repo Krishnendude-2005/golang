@@ -20,7 +20,6 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
-	defer db.Close()
 
 	// Task Layers - store, service, handler
 	tStore := taskStore.New(db)           // Store depends on DB.
@@ -35,7 +34,7 @@ func main() {
 	// Task Handlers.
 	http.HandleFunc("/task/add", tHandler.Create)
 	http.HandleFunc("/task/user", tHandler.GetByUserID)
-	http.HandleFunc("/task/delete", tHandler.Delete)
+	http.HandleFunc("/task/delete", tHandler.DeleteTaskById)
 	http.HandleFunc("/task/update", tHandler.Update)
 	http.HandleFunc("/task/all", tHandler.GetAll)
 	//User Handlers.
