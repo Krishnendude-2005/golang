@@ -33,7 +33,6 @@ func (s *store) GetById(userID int) ([]models.Task, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	var tasks []models.Task
 	for rows.Next() {
@@ -50,10 +49,13 @@ func (s *store) GetById(userID int) ([]models.Task, error) {
 }
 
 // DeleteTaskById - deletes by task ID
-func (s *store) DeleteTaskById(id int) error {
+func (s *store) DeleteTaskById(id int) (int, error) {
 	query := "DELETE FROM tasks WHERE ID = ?"
 	_, err := s.db.Exec(query, id)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return id, nil
 }
 
 // Update task by task ID.
