@@ -1,86 +1,125 @@
-package user
+package user_test
 
 import (
+	"SQLTaskmanager_3layer/handler/user"
 	"SQLTaskmanager_3layer/models"
 	"bytes"
+	"context"
 	"encoding/json"
-	"errors"
-	"io"
+	"github.com/gorilla/mux"
+	"go.uber.org/mock/gomock"
+	"gofr.dev/pkg/gofr"
+	"gofr.dev/pkg/gofr/container"
+	gofrHTTP "gofr.dev/pkg/gofr/http"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
-type mockService struct {
-	//empty
-}
+func Test_Create_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-func (m *mockService) Create(user models.User) (models.User, error) {
-	return models.User{
-		ID:       user.ID,
-		TaskName: user.TaskName,
-	}, nil
-}
-func TestCreate(t *testing.T) {
-	handler := New(&mockService{})
-	task := models.User{
-		ID:       101,
-		TaskName: "New user",
-	}
-	taskJson, _ := json.Marshal(task)
-	req := httptest.NewRequest(http.MethodPost, "/user/add", bytes.NewBuffer(taskJson))
+	mockSvc := NewMockService(ctrl)
+	h := user.New(mockSvc)
+
+	input := models.User{TaskName: "Hello"}
+	expected := models.User{ID: 1, TaskName: "Hello"}
+
+	body, _ := json.Marshal(input)
+	req := httptest.NewRequest(http.MethodPost, "/user", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	writer := httptest.NewRecorder()
 
-	var respUser models.User
+	mockC, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Request:   gofrHTTP.NewRequest(req),
+		Container: mockC,
+	}
 
-	handler.Create(writer, req)
-	result := writer.Result()
-	respBody, _ := io.ReadAll(result.Body)
-	err := json.Unmarshal(respBody, &respUser)
+	_ = ctx.Bind(&input)
+	mockSvc.EXPECT().Create(ctx, input).Return(expected, nil)
+
+	resp, err := h.Create(ctx)
 	if err != nil {
-		t.Error("Some error in unmarshalling")
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if writer.Code != http.StatusOK {
-		t.Error("Wrong response code")
-	}
-	if respUser.ID != task.ID {
-		t.Error("Same ID expected")
-	}
-	if respUser.TaskName != task.TaskName {
-		t.Error("Same TaskName expected")
+	got := resp.(models.User)
+	if got.ID != 1 {
+		t.Errorf("expected ID 1, got %d", got.ID)
 	}
 }
-func (m *mockService) GetById(id int) (models.User, error) {
-	if id == 101 {
-		return models.User{
-			ID:       101,
-			TaskName: "New user",
-		}, nil
+
+func Test_Create_InvalidJSON(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	h := user.New(NewMockService(ctrl))
+
+	req := httptest.NewRequest(http.MethodPost, "/user", bytes.NewReader([]byte(`{bad json`)))
+	req.Header.Set("Content-Type", "application/json")
+
+	mockC, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Request:   gofrHTTP.NewRequest(req),
+		Container: mockC,
 	}
-	return models.User{}, errors.New("user not found")
+
+	_, err := h.Create(ctx)
+	if err == nil {
+		t.Errorf("expected error for invalid JSON")
+	}
 }
-func TestGetByID(t *testing.T) {
-	handler := New(&mockService{})
 
-	req := httptest.NewRequest(http.MethodGet, "/user/find?id=101", nil)
-	w := httptest.NewRecorder()
+func Test_GetById_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	handler.GetByID(w, req)
+	mockSvc := NewMockService(ctrl)
+	h := user.New(mockSvc)
 
-	resp := w.Result()
+	expected := models.User{ID: 10, TaskName: "Test"}
+	req := httptest.NewRequest(http.MethodGet, "/user/10", nil)
+	req = mux.SetURLVars(req, map[string]string{"id": "10"})
 
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("Expected status 200 OK, got %d", resp.StatusCode)
+	mockC, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Request:   gofrHTTP.NewRequest(req),
+		Container: mockC,
 	}
 
-	var user models.User
-	body, _ := io.ReadAll(resp.Body)
-	if err := json.Unmarshal(body, &user); err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
+	mockSvc.EXPECT().GetById(ctx, 10).Return(expected, nil)
+
+	resp, err := h.GetById(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	got := resp.(models.User)
+	if got.ID != 10 {
+		t.Errorf("expected ID 10, got %d", got.ID)
+	}
+}
+
+func Test_GetById_InvalidID(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	h := user.New(NewMockService(ctrl))
+
+	req := httptest.NewRequest(http.MethodGet, "/user/abc", nil)
+	req = mux.SetURLVars(req, map[string]string{"id": "abc"})
+
+	mockC, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Request:   gofrHTTP.NewRequest(req),
+		Container: mockC,
 	}
 
-	if user.ID != 101 || user.TaskName != "New user" {
-		t.Errorf("Unexpected user data: %+v", user)
+	_, err := h.GetById(ctx)
+	if err == nil {
+		t.Errorf("expected error for invalid ID")
 	}
 }

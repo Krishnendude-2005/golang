@@ -2,28 +2,24 @@ package user
 
 import (
 	"SQLTaskmanager_3layer/models"
+	"gofr.dev/pkg/gofr"
 )
 
-type Store interface {
-	Create(user models.User) (models.User, error)
-	GetById(id int) (models.User, error)
-}
-
-type service struct {
+type Service struct {
 	store Store
 }
 
-func New(store Store) *service {
-	return &service{store: store}
+func New(store Store) *Service {
+	return &Service{store: store}
 }
 
-func (s *service) Create(user models.User) (models.User, error) {
+func (s *Service) Create(c *gofr.Context, user models.User) (models.User, error) {
 	if err := user.Validate(); err != nil {
 		return models.User{}, err
 	}
-	return s.store.Create(user)
+	return s.store.Create(c, user)
 }
 
-func (s *service) GetById(id int) (models.User, error) {
-	return s.store.GetById(id)
+func (s *Service) GetById(c *gofr.Context, id int) (models.User, error) {
+	return s.store.GetById(c, id)
 }

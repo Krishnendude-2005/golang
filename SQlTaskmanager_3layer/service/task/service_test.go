@@ -1,163 +1,211 @@
-package task
+package task_test
 
 import (
-	"SQLTaskmanager_3layer/models"
+	"context"
+	"errors"
 	"testing"
+
+	"SQLTaskmanager_3layer/models"
+	"SQLTaskmanager_3layer/service/task"
+
+	"gofr.dev/pkg/gofr"
+	"gofr.dev/pkg/gofr/container"
+
+	"go.uber.org/mock/gomock"
 )
 
-type mockStore struct {
-	// empty
-}
+func TestService_Create_Valid(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-func (m *mockStore) Create(task models.Task, userID int) (models.Task, error) {
-	var taskCreated models.Task
-	taskCreated.UserID = userID
-	taskCreated.ID = 1001
-	taskCreated.Description = "task description"
-	taskCreated.Status = true
-	return taskCreated, nil
-}
-func TestCreate(t *testing.T) {
-	svc := New(&mockStore{})
-	task := models.Task{
-		UserID:      101,
-		ID:          1001,
-		Description: "task description",
-		Status:      true,
+	mockStore := NewMockStore(ctrl)
+	svc := task.New(mockStore)
+
+	// explicit context
+	mockContainer, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Container: mockContainer,
 	}
 
-	returnedTask, err := svc.Create(task, 101)
+	input := models.Task{Description: "dummy task1", Status: true, UserID: 42}
+	expected := models.Task{ID: 11, Description: "dummy task1", Status: true, UserID: 42}
+
+	mockStore.EXPECT().Create(ctx, input, 42).Return(expected, nil)
+
+	got, err := svc.Create(ctx, input, 42)
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if returnedTask.UserID != 101 {
-		t.Error("Expected 101, got ", returnedTask.UserID)
-	}
-	if returnedTask.ID != 1001 {
-		t.Error("Expected 1001, got ", returnedTask.ID)
-	}
-	if returnedTask.Description != "task description" {
-		t.Error("Expected task description, got ", returnedTask.Description)
-	}
-	if returnedTask.Status != true {
-		t.Error("Expected true, got ", returnedTask.Status)
-	}
-
-}
-
-func (m *mockStore) GetById(userID int) ([]models.Task, error) {
-	//TODO implement me
-	tasks := []models.Task{}
-
-	if userID == 1 {
-		task := models.Task{
-			ID: 1,
-		}
-		tasks = append(tasks, task)
-	}
-	return tasks, nil
-}
-
-func Test_GetByID(t *testing.T) {
-	svc := New(&mockStore{})
-
-	res, err := svc.GetById(1)
-	if res[0].ID != 1 || err != nil {
-		t.Errorf("Somthing wrong")
+	if got.ID != expected.ID {
+		t.Errorf("expected ID %d, got %d", expected.ID, got.ID)
 	}
 }
 
-func (m *mockStore) Update(task models.Task, taskID int) (models.Task, error) {
-	var fTask models.Task
-	fTask.ID = taskID
-	fTask.UserID = task.UserID
-	fTask.Description = task.Description
-	fTask.Status = task.Status
+func TestService_Create_Invalid(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-	return fTask, nil
-}
+	mockStore := NewMockStore(ctrl)
+	svc := task.New(mockStore)
 
-func Test_Update(t *testing.T) {
-	svc := New(&mockStore{})
-	upDatedtask := models.Task{
-		ID:          101,
-		Description: "description",
-		Status:      true,
-		UserID:      1001,
+	mockContainer, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Container: mockContainer,
 	}
-	res, _ := svc.Update(upDatedtask, 101)
-	if res.Status != upDatedtask.Status {
-		t.Errorf("Somthing wrong")
-	}
-	if res.UserID != upDatedtask.UserID {
-		t.Errorf("Somthing wrong")
+
+	input := models.Task{} // invalid
+	_, err := svc.Create(ctx, input, 0)
+	if err == nil {
+		t.Fatal("expected error, got nil")
 	}
 }
 
-func (m *mockStore) DeleteTaskById(id int) (int, error) {
-	//svc := New(&mockStore{})
-	var tasks []models.Task
-	for i := 0; i < 3; i++ {
-		var task models.Task
-		task.ID = i
-		task.UserID = i + 100
-		task.Description = "task description"
-		task.Status = true
+func TestService_GetById(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-		tasks = append(tasks, task)
+	mockStore := NewMockStore(ctrl)
+	svc := task.New(mockStore)
 
+	mockContainer, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Container: mockContainer,
 	}
 
-	for i := 0; i < len(tasks); i++ {
-		if id == tasks[i].ID {
-			tasks = append(tasks[:i], tasks[i+1:]...)
-		}
-	}
-	return id, nil
-}
-func Test_DeleteTaskById(t *testing.T) {
-	svc := New(&mockStore{})
+	expected := []models.Task{{ID: 101, Description: "dummy", Status: false, UserID: 9}}
 
-	id, err := svc.DeleteTaskById(1)
+	mockStore.EXPECT().GetById(ctx, 9).Return(expected, nil)
+
+	tasks, err := svc.GetById(ctx, 9)
 	if err != nil {
-		t.Error(err)
-	}
-	if id != 1 {
-		t.Error("Expected 1, got ", id)
+		t.Fatalf("unexpected error: %v", err)
 	}
 
+	if len(tasks) != 1 || tasks[0].ID != 101 {
+		t.Errorf("unexpected tasks: %+v", tasks)
+	}
 }
-func (m *mockStore) GetAll() ([]models.Task, error) {
-	var tasks []models.Task
-	for i := 0; i < 3; i++ {
-		var task models.Task
-		task.ID = i
-		task.UserID = i + 100
-		task.Description = "task description"
-		task.Status = true
 
-		tasks = append(tasks, task)
+func TestService_DeleteTaskById_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
+	mockStore := NewMockStore(ctrl)
+	svc := task.New(mockStore)
+
+	mockContainer, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Container: mockContainer,
 	}
-	return tasks, nil
-}
-func Test_GetAll(t *testing.T) {
-	svc := New(&mockStore{})
-	tasks, err := svc.GetAll()
+
+	mockStore.EXPECT().DeleteTaskById(ctx, 5).Return(5, nil)
+
+	id, err := svc.DeleteTaskById(ctx, 5)
 	if err != nil {
-		t.Error(err)
-	}
-	if len(tasks) != 3 {
-		t.Error("Expected length 3, got ", len(tasks))
+		t.Errorf("expected no error, got: %v", err)
 	}
 
-	for i := 0; i < 3; i++ {
-		if tasks[i].ID != i {
-			t.Error("Expected ", tasks[i].ID, "got ", tasks[i].ID)
-		}
-		if tasks[i].UserID != i+100 {
-			t.Error("Expected ", tasks[i].UserID, "got ", tasks[i].UserID)
-		}
+	if id != 5 {
+		t.Errorf("expected id 5, got %d", id)
+	}
+}
+
+func TestService_DeleteTaskById_Error(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockStore := NewMockStore(ctrl)
+	svc := task.New(mockStore)
+
+	mockContainer, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Container: mockContainer,
+	}
+
+	mockStore.EXPECT().DeleteTaskById(ctx, 7).Return(0, errors.New("some error"))
+
+	_, err := svc.DeleteTaskById(ctx, 7)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestService_Update_Valid(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockStore := NewMockStore(ctrl)
+	svc := task.New(mockStore)
+
+	mockContainer, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Container: mockContainer,
+	}
+
+	input := models.Task{Description: "Updated", Status: false, UserID: 55}
+	expected := models.Task{ID: 77, Description: "Updated", Status: false, UserID: 55}
+
+	mockStore.EXPECT().Update(ctx, input, 77).Return(expected, nil)
+
+	got, err := svc.Update(ctx, input, 77)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.ID != 77 {
+		t.Errorf("expected ID 77, got %d", got.ID)
+	}
+}
+
+func TestService_Update_Invalid(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockStore := NewMockStore(ctrl)
+	svc := task.New(mockStore)
+
+	mockContainer, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Container: mockContainer,
+	}
+
+	input := models.Task{} // invalid
+	_, err := svc.Update(ctx, input, 0)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestService_GetAll(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockStore := NewMockStore(ctrl)
+	svc := task.New(mockStore)
+
+	mockContainer, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Container: mockContainer,
+	}
+
+	expected := []models.Task{{ID: 1}, {ID: 2}}
+
+	mockStore.EXPECT().GetAll(ctx).Return(expected, nil)
+
+	got, err := svc.GetAll(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(got) != 2 {
+		t.Errorf("expected 2 tasks, got %d", len(got))
 	}
 }

@@ -1,68 +1,109 @@
-package user
+package user_test
 
 import (
-	"SQLTaskmanager_3layer/models"
+	"context"
 	"errors"
 	"testing"
+
+	"SQLTaskmanager_3layer/models"
+	"SQLTaskmanager_3layer/service/user"
+
+	"gofr.dev/pkg/gofr"
+	"gofr.dev/pkg/gofr/container"
+
+	"go.uber.org/mock/gomock"
 )
 
-type mockStore struct {
-	//empty
-}
+func TestService_Create_Valid(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-func (m *mockStore) Create(user models.User) (models.User, error) {
-	var userMade models.User
-	userMade.ID = user.ID
-	userMade.TaskName = user.TaskName
-	return userMade, nil
-}
-func Test_Create(t *testing.T) {
-	svc := New(&mockStore{})
-	newUser := models.User{
-		ID:       1,
-		TaskName: "task1",
+	mockStore := NewMockStore(ctrl)
+	svc := user.New(mockStore)
+
+	mockContainer, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Container: mockContainer,
 	}
-	respUser, err := svc.Create(newUser)
+
+	input := models.User{ID: 1001, TaskName: "Test User"}
+	expected := models.User{ID: 1001, TaskName: "Test User"}
+
+	mockStore.EXPECT().Create(ctx, input).Return(expected, nil)
+
+	got, err := svc.Create(ctx, input)
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("unexpected error: %v", err)
 	}
-	if respUser.ID != 1 {
-		t.Error("id is not 1")
-	}
-	if respUser.TaskName != "task1" {
-		t.Error("task name is not task1")
+	if got.ID != expected.ID || got.TaskName != expected.TaskName {
+		t.Errorf("expected %+v, got %+v", expected, got)
 	}
 }
-func (m *mockStore) GetById(id int) (models.User, error) {
-	var gotUser models.User
-	var users = []models.User{
-		{
-			ID:       1,
-			TaskName: "New task 1",
-		},
-		{
-			ID:       2,
-			TaskName: "New task 2",
-		},
+
+func TestService_Create_Invalid(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockStore := NewMockStore(ctrl)
+	svc := user.New(mockStore)
+
+	mockContainer, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Container: mockContainer,
 	}
 
-	for i := range users {
-		if users[i].ID == id {
-			gotUser = users[i]
-			return gotUser, nil
-		}
+	input := models.User{} // TaskName is empty, should fail validation
+
+	_, err := svc.Create(ctx, input)
+	if err == nil {
+		t.Fatal("expected validation error, got nil")
 	}
-	return models.User{}, errors.New("user not found")
 }
-func Test_GetById(t *testing.T) {
-	svc := New(&mockStore{})
 
-	respUser, err := svc.GetById(1)
+func TestService_GetById_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockStore := NewMockStore(ctrl)
+	svc := user.New(mockStore)
+
+	mockContainer, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Container: mockContainer,
+	}
+
+	expected := models.User{ID: 101, TaskName: "User 101"}
+	mockStore.EXPECT().GetById(ctx, 101).Return(expected, nil)
+
+	got, err := svc.GetById(ctx, 101)
 	if err != nil {
-		t.Error(err)
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got.ID != expected.ID || got.TaskName != expected.TaskName {
+		t.Errorf("expected %+v, got %+v", expected, got)
+	}
+}
+
+func TestService_GetById_Error(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockStore := NewMockStore(ctrl)
+	svc := user.New(mockStore)
+
+	mockContainer, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Container: mockContainer,
 	}
 
-	if respUser.ID != 1 {
-		t.Error("id is not 1")
+	mockStore.EXPECT().GetById(ctx, 999).Return(models.User{}, errors.New("not found"))
+
+	_, err := svc.GetById(ctx, 999)
+	if err == nil {
+		t.Fatal("expected error, got nil")
 	}
 }

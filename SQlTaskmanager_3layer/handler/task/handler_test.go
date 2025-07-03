@@ -1,173 +1,301 @@
-package task
+package task_test
 
 import (
+	"SQLTaskmanager_3layer/handler/task"
 	"SQLTaskmanager_3layer/models"
+
 	"bytes"
+	"context"
 	"encoding/json"
-	"io"
+	"errors"
+	"github.com/gorilla/mux"
+	"go.uber.org/mock/gomock"
+	"gofr.dev/pkg/gofr"
+	"gofr.dev/pkg/gofr/container"
+	gofrHTTP "gofr.dev/pkg/gofr/http"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
-type mockService struct {
-	//empty
-}
+// Test: Create success.
+func TestCreate_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	mockSvc := NewMockService(ctrl)
+	handler := task.New(mockSvc)
 
-func (s *mockService) GetById(userID int) ([]models.Task, error) {
-	return []models.Task{
-		{ID: 1, Description: "Task 1", Status: false, UserID: userID},
-		{ID: 2, Description: "Task 2", Status: true, UserID: userID},
-	}, nil
-}
+	input := models.Task{Description: "Test", Status: false, UserID: 1001}
+	expected := models.Task{ID: 1, Description: "Test", Status: false, UserID: 1001}
+	body, _ := json.Marshal(input)
 
-func TestGetByID(t *testing.T) {
-	handler := New(&mockService{})
+	req := httptest.NewRequest(http.MethodPost, "/task", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	mockC, _ := container.NewMockContainer(t)
 
-	req := httptest.NewRequest(http.MethodGet, "/task?user_id=1001", nil)
-	w := httptest.NewRecorder()
-	handler.GetByUserID(w, req)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Request:   gofrHTTP.NewRequest(req),
+		Container: mockC,
+	}
 
-	resp := w.Result()
-	body, _ := io.ReadAll(resp.Body)
+	_ = ctx.Bind(&input)
+	mockSvc.EXPECT().Create(ctx, input, input.UserID).Return(expected, nil)
 
-	var tasks []models.Task
-	err := json.Unmarshal(body, &tasks)
+	resp, err := handler.Create(ctx)
 	if err != nil {
-		t.Fatalf("Unmarshal failed: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(tasks) != 2 {
-		t.Errorf("Expected 2 tasks, got %d", len(tasks))
-	}
-
-	if tasks[0].UserID != 1001 || tasks[1].UserID != 1001 {
-		t.Errorf("Expected user ID 1001, got %+v", tasks)
+	got, ok := resp.(models.Task)
+	if !ok || got.ID != 1 {
+		t.Errorf("expected ID 1, got %v", resp)
 	}
 }
 
-func (s *mockService) Create(task models.Task, userID int) (models.Task, error) {
-	var taskCreated models.Task
-	taskCreated.UserID = userID
-	taskCreated.ID = 1001
-	taskCreated.Description = "task description"
-	taskCreated.Status = true
-	return taskCreated, nil
-}
-func TestCreate(t *testing.T) {
-	handler := New(&mockService{})
-	taskDummy := models.Task{
-		Description: "task description",
-		UserID:      1001,
-		ID:          101,
-		Status:      true,
+func TestCreate_InvalidJSON(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockSvc := NewMockService(ctrl)
+	handler := task.New(mockSvc)
+
+	// Malformed JSON
+	req := httptest.NewRequest(http.MethodPost, "/task", strings.NewReader("{bad json"))
+	req.Header.Set("Content-Type", "application/json")
+
+	mockC, _ := container.NewMockContainer(t)
+
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Request:   gofrHTTP.NewRequest(req),
+		Container: mockC,
 	}
 
-	jsonTaskDummy, _ := json.Marshal(taskDummy)
-	req := httptest.NewRequest(http.MethodPost, "/task", bytes.NewBuffer(jsonTaskDummy))
-	w := httptest.NewRecorder()
-	handler.Create(w, req)
-	resp := w.Result()
-	body, _ := io.ReadAll(resp.Body)
-	var taskCreated models.Task
-	err := json.Unmarshal(body, &taskCreated)
+	// No expectations because binding fails before calling service
+	_, err := handler.Create(ctx)
+	if err == nil {
+		t.Error("expected error for invalid JSON")
+	}
+}
+
+func TestCreate_ServiceError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockSvc := NewMockService(ctrl)
+	handler := task.New(mockSvc)
+
+	input := models.Task{Description: "Fail", Status: false, UserID: 1}
+	body, _ := json.Marshal(input)
+	req := httptest.NewRequest(http.MethodPost, "/task", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	mockC, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Request:   gofrHTTP.NewRequest(req),
+		Container: mockC,
+	}
+
+	_ = ctx.Bind(&input)
+	mockSvc.EXPECT().Create(ctx, input, input.UserID).Return(models.Task{}, errors.New("fail"))
+
+	_, err := handler.Create(ctx)
+	if err == nil {
+		t.Error("expected service error")
+	}
+}
+
+func TestGetById_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockSvc := NewMockService(ctrl)
+	handler := task.New(mockSvc)
+
+	expected := []models.Task{{ID: 1, Description: "Hello", UserID: 1001}}
+
+	req := httptest.NewRequest(http.MethodGet, "/task/1001", nil)
+	req = mux.SetURLVars(req, map[string]string{"id": "1001"})
+	mockC, _ := container.NewMockContainer(t)
+
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Request:   gofrHTTP.NewRequest(req),
+		Container: mockC,
+	}
+
+	mockSvc.EXPECT().GetById(ctx, 1001).Return(expected, nil)
+
+	resp, err := handler.GetById(ctx)
 	if err != nil {
-		t.Errorf("Unmarshal failed: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if taskCreated.UserID != taskDummy.UserID {
-		t.Errorf("Create Task Failed")
-	}
-}
-
-func (s *mockService) GetByUserID(userID int) ([]models.Task, error) {
-	return []models.Task{
-		{ID: 1, Description: "Task1", Status: false, UserID: userID},
-		{ID: 2, Description: "Task2", Status: true, UserID: userID},
-	}, nil
-
-}
-
-func (s *mockService) DeleteTaskById(id int) (int, error) {
-	return id, nil
-}
-func TestDelete(t *testing.T) {
-	handler := New(&mockService{})
-
-	req := httptest.NewRequest(http.MethodDelete, "/task?id=1", nil)
-	w := httptest.NewRecorder()
-	handler.DeleteTaskById(w, req)
-
-	resp := w.Result()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected 200 OK, got %d", resp.StatusCode)
-	}
-
-	body, _ := io.ReadAll(resp.Body)
-	if string(body) != "Task deleted" {
-		t.Errorf("Expected 'Task deleted', got '%s'", string(body))
+	got, ok := resp.([]models.Task)
+	if !ok || len(got) != 1 || got[0].UserID != 1001 {
+		t.Error("unexpected result in GetById")
 	}
 }
 
-func (s *mockService) Update(task models.Task, taskID int) (models.Task, error) {
-	task.ID = taskID
-	return task, nil
+func TestGetById_InvalidID(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	handler := task.New(NewMockService(ctrl))
+	req := httptest.NewRequest(http.MethodGet, "/task/abc", nil)
+	req = mux.SetURLVars(req, map[string]string{"id": "abc"})
+
+	mockC, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Request:   gofrHTTP.NewRequest(req),
+		Container: mockC,
+	}
+
+	_, err := handler.GetById(ctx)
+	if err == nil {
+		t.Error("expected error for invalid ID")
+	}
 }
 
-func TestUpdate(t *testing.T) {
-	handler := New(&mockService{})
-	task := models.Task{
-		Description: "Updated Task",
-		Status:      true,
-		UserID:      1001,
+func TestDelete_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockSvc := NewMockService(ctrl)
+	handler := task.New(mockSvc)
+
+	req := httptest.NewRequest(http.MethodDelete, "/task/delete/1", nil)
+	req = mux.SetURLVars(req, map[string]string{"id": "1"})
+	mockC, _ := container.NewMockContainer(t)
+
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Request:   gofrHTTP.NewRequest(req),
+		Container: mockC,
 	}
 
-	jsonTask, _ := json.Marshal(task)
-	req := httptest.NewRequest(http.MethodPut, "/task?id=1", bytes.NewBuffer(jsonTask))
-	w := httptest.NewRecorder()
+	mockSvc.EXPECT().DeleteTaskById(ctx, 1).Return(1, nil)
 
-	handler.Update(w, req)
-	resp := w.Result()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", resp.StatusCode)
-	}
-
-	var updated models.Task
-	body, _ := io.ReadAll(resp.Body)
-	err := json.Unmarshal(body, &updated)
+	resp, err := handler.DeleteTaskById(ctx)
 	if err != nil {
-		t.Errorf("Unmarshal failed: %v", err)
+		t.Fatalf("unexpected error: %v", err)
 	}
-
-	if updated.Description != "Updated Task" {
-		t.Errorf("Expected description to be 'Updated Task', got '%s'", updated.Description)
+	got, ok := resp.(int)
+	if !ok || got != 1 {
+		t.Errorf("expected 1, got %v", resp)
 	}
 }
 
-func (s *mockService) GetAll() ([]models.Task, error) {
-	return []models.Task{
-		{ID: 1, Description: "Task A", Status: true, UserID: 2001},
-	}, nil
+func TestDelete_InvalidID(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	handler := task.New(NewMockService(ctrl))
+	req := httptest.NewRequest(http.MethodDelete, "/task/delete/abc", nil)
+	req = mux.SetURLVars(req, map[string]string{"id": "abc"})
+
+	mockC, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Request:   gofrHTTP.NewRequest(req),
+		Container: mockC,
+	}
+
+	_, err := handler.DeleteTaskById(ctx)
+	if err == nil {
+		t.Error("expected error for invalid ID")
+	}
 }
 
-func TestGetAll(t *testing.T) {
-	handler := New(&mockService{})
+// Test: Update success
+func TestUpdate_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockSvc := NewMockService(ctrl)
+	handler := task.New(mockSvc)
+
+	input := models.Task{Description: "Hello", Status: false, UserID: 1001}
+	updated := models.Task{ID: 1, Description: "Updated", Status: true, UserID: 1001}
+	body, _ := json.Marshal(input)
+
+	// Use gorilla/mux to simulate URL vars correctly
+	req := httptest.NewRequest(http.MethodPut, "/task/update/1", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req = mux.SetURLVars(req, map[string]string{"id": "1"}) // ✅ This is important
+
+	mockC, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Request:   gofrHTTP.NewRequest(req),
+		Container: mockC,
+	}
+
+	_ = ctx.Bind(&input)
+
+	// Match expected input values correctly
+	mockSvc.EXPECT().Update(gomock.Any(), input, 1).Return(updated, nil)
+
+	resp, err := handler.Update(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	got := resp.(models.Task)
+	if got.Description != "Updated" {
+		t.Error("task not updated")
+	}
+}
+
+func TestUpdate_InvalidID(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	handler := task.New(NewMockService(ctrl))
+	req := httptest.NewRequest(http.MethodPut, "/task/update/xyz", nil)
+	req = mux.SetURLVars(req, map[string]string{"id": "xyz"})
+
+	mockC, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Request:   gofrHTTP.NewRequest(req),
+		Container: mockC,
+	}
+
+	_, err := handler.Update(ctx)
+	if err == nil {
+		t.Error("expected error for invalid ID")
+	}
+}
+
+func TestGetAll_Success(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockSvc := NewMockService(ctrl)
+	handler := task.New(mockSvc)
+
+	expected := []models.Task{{ID: 1, UserID: 1001}}
 	req := httptest.NewRequest(http.MethodGet, "/task/all", nil)
-	w := httptest.NewRecorder()
 
-	handler.GetAll(w, req)
-
-	resp := w.Result()
-	body, _ := io.ReadAll(resp.Body)
-
-	var tasks []models.Task
-	if err := json.Unmarshal(body, &tasks); err != nil {
-		t.Fatalf("Failed to unmarshal response: %v", err)
+	mockC, _ := container.NewMockContainer(t)
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Request:   gofrHTTP.NewRequest(req),
+		Container: mockC,
 	}
 
-	if len(tasks) != 1 || tasks[0].Description != "Task A" {
-		t.Errorf("Unexpected task data: %+v", tasks)
+	mockSvc.EXPECT().GetAll(ctx).Return(expected, nil)
+
+	resp, err := handler.GetAll(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	got, ok := resp.([]models.Task)
+	if !ok || len(got) != 1 {
+		t.Errorf("expected 1 task, got %v", resp)
 	}
 }

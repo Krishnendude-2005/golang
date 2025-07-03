@@ -1,64 +1,75 @@
-package user
+package user_test
 
 import (
-	"SQLTaskmanager_3layer/models"
-	"github.com/DATA-DOG/go-sqlmock"
+	"context"
 	"testing"
+
+	"SQLTaskmanager_3layer/models"
+	"SQLTaskmanager_3layer/store/user"
+
+	"github.com/DATA-DOG/go-sqlmock"
+	"gofr.dev/pkg/gofr"
+	"gofr.dev/pkg/gofr/container"
 )
 
-func TestGetByID(t *testing.T) {
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+func TestUserStore_Create(t *testing.T) {
+	mockContainer, mocks := container.NewMockContainer(t)
+
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Container: mockContainer,
+	}
+
+	store := user.New()
+
+	// ✅ Updated to expect ID and TaskName
+	mocks.SQL.
+		ExpectExec(`INSERT INTO users (ID, TaskName) VALUES (?, ?)`).
+		WithArgs(101, "Test User").
+		WillReturnResult(sqlmock.NewResult(0, 1)) // ID doesn't matter here
+
+	// ✅ Include ID in test input
+	input := models.User{ID: 101, TaskName: "Test User"}
+	created, err := store.Create(ctx, input)
+
 	if err != nil {
-		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+		t.Errorf("expected no error, got: %v", err)
 	}
-
-	str := New(db)
-
-	rows := sqlmock.NewRows([]string{"id", "task_name"}).AddRow(2, "task1")
-
-	mock.ExpectQuery("SELECT ID, TaskName FROM users WHERE ID = ?").WithArgs(2).WillReturnRows(rows)
-
-	user, err := str.GetById(2)
-
-	if err != nil {
-		t.Fatalf("an error '%s' was not expected when getting user by ID", err)
+	if created.ID != 101 {
+		t.Errorf("expected ID 101, got: %d", created.ID)
 	}
-
-	if user.ID != 2 {
-		t.Errorf("got user ID %d, wanted 1", user.ID)
-	}
-
-	if user.TaskName != "task1" {
-		t.Errorf("got user task name %s, wanted task1", user.TaskName)
+	if created.TaskName != "Test User" {
+		t.Errorf("expected TaskName 'Test User', got: %s", created.TaskName)
 	}
 }
-func TestCreate(t *testing.T) {
-	userDummy := models.User{
-		ID:       2,
-		TaskName: "task2",
+
+func TestUserStore_GetById(t *testing.T) {
+	mockContainer, mocks := container.NewMockContainer(t)
+
+	ctx := &gofr.Context{
+		Context:   context.Background(),
+		Container: mockContainer,
 	}
 
-	db, mock, err := sqlmock.New(sqlmock.QueryMatcherOption(sqlmock.QueryMatcherEqual))
+	store := user.New()
+
+	row := sqlmock.NewRows([]string{"ID", "TaskName"}).
+		AddRow(42, "User 42")
+
+	mocks.SQL.
+		ExpectQuery(`SELECT ID, TaskName FROM users WHERE ID = ?`).
+		WithArgs(42).
+		WillReturnRows(row)
+
+	userData, err := store.GetById(ctx, 42)
+
 	if err != nil {
-		t.Fatalf("unexpected error opening stub DB: %s", err)
+		t.Errorf("expected no error, got: %v", err)
 	}
-
-	str := New(db)
-
-	mock.ExpectExec("INSERT INTO users (ID, TaskName) VALUES (?, ?)").
-		WithArgs(2, "task2").
-		WillReturnResult(sqlmock.NewResult(2, 1))
-
-	ans, err := str.Create(userDummy)
-	if err != nil {
-		t.Fatalf("unexpected error on Create: %s", err)
+	if userData.ID != 42 {
+		t.Errorf("expected ID 42, got: %d", userData.ID)
 	}
-
-	if ans.TaskName != "task2" {
-		t.Errorf("got TaskName %s, wanted task2", ans.TaskName)
+	if userData.TaskName != "User 42" {
+		t.Errorf("expected TaskName 'User 42', got: %s", userData.TaskName)
 	}
-	if ans.ID != 2 {
-		t.Errorf("got ID %d, wanted 2", ans.ID)
-	}
-
 }

@@ -2,38 +2,33 @@ package user
 
 import (
 	"SQLTaskmanager_3layer/models"
-	"database/sql"
-	"errors"
+	"gofr.dev/pkg/gofr"
 )
 
-type store struct {
-	db *sql.DB
+type Store interface {
+	Create(c *gofr.Context, user models.User) (models.User, error)
+	GetById(c *gofr.Context, id int) (models.User, error)
 }
 
-func New(db *sql.DB) *store {
-	return &store{db: db}
+type store struct{}
+
+func New() Store {
+	return &store{}
 }
 
-func (s *store) Create(user models.User) (models.User, error) {
-	var existingID int
-	queryTwo := "SELECT ID FROM users WHERE ID = ?"
-	err := s.db.QueryRow(queryTwo, user.ID).Scan(&existingID)
-
-	if err == nil { // Means - there is a user in DB with that ID so we got valid Output. That means user already exists.
-		return models.User{}, errors.New("user already exists")
-	}
-
+// Create - Uses userID from input.
+func (s *store) Create(c *gofr.Context, user models.User) (models.User, error) {
 	query := "INSERT INTO users (ID, TaskName) VALUES (?, ?)"
-	_, errSms := s.db.Exec(query, user.ID, user.TaskName)
-	if errSms != nil {
+	_, err := c.SQL.ExecContext(c, query, user.ID, user.TaskName)
+	if err != nil {
 		return models.User{}, err
 	}
 	return user, nil
 }
 
-func (s *store) GetById(id int) (models.User, error) {
+func (s *store) GetById(c *gofr.Context, id int) (models.User, error) {
 	query := "SELECT ID, TaskName FROM users WHERE ID = ?"
-	row := s.db.QueryRow(query, id)
+	row := c.SQL.QueryRowContext(c, query, id)
 
 	var user models.User
 	err := row.Scan(&user.ID, &user.TaskName)
