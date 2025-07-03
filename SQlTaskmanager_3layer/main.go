@@ -7,41 +7,39 @@ import (
 	userService "SQLTaskmanager_3layer/service/user"
 	taskStore "SQLTaskmanager_3layer/store/task"
 	userStore "SQLTaskmanager_3layer/store/user"
-	"database/sql"
-	"fmt"
-	_ "github.com/go-sql-driver/mysql"
-	"log"
-	"net/http"
+	"gofr.dev/examples/using-add-rest-handlers/migrations"
+	"gofr.dev/pkg/gofr/datasource"
+
+	"gofr.dev/pkg/gofr"
 )
 
 func main() {
-	// Connecting to MySQL
-	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/task_manager")
-	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
-	}
-	defer db.Close()
+	app := gofr.New()
+	app.Migrate(migrations.All())
 
-	// Task Layers - store, service, handler
-	tStore := taskStore.New(db)           // Store depends on DB.
-	tService := taskService.New(tStore)   // Service depends on Store.
-	tHandler := taskHandler.New(tService) // Handlers depends on Service.
+	tStore := taskStore.New()
+	tService := taskService.New(tStore)
+	tHandler := taskHandler.New(tService)
 
-	// User Layers - store, service, handler
-	uStore := userStore.New(db)
+	uStore := userStore.New()
 	uService := userService.New(uStore)
 	uHandler := userHandler.New(uService)
 
-	// Task Handlers.
-	http.HandleFunc("/task/add", tHandler.Create)
-	http.HandleFunc("/task/user", tHandler.GetByUserID)
-	http.HandleFunc("/task/delete", tHandler.Delete)
-	http.HandleFunc("/task/update", tHandler.Update)
-	http.HandleFunc("/task/all", tHandler.GetAll)
-	//User Handlers.
-	http.HandleFunc("/user/add", uHandler.Create)
-	http.HandleFunc("/user/find", uHandler.GetByID)
-	// Server Running.
-	fmt.Println("Server is running on :8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	// Routes
+	app.POST("/task", tHandler.Create)
+	app.GET("/task/find/{id}", tHandler.GetById)
+
+	app.POST("/user", uHandler.Create)
+	app.GET("/user/find/{id}", uHandler.GetById)
+	app.GET("/mysql", MysqlHandler)
+	app.Run()
+}
+func MysqlHandler(c *gofr.Context) (any, error) {
+	var value int
+	err := c.SQL.QueryRowContext(c, "select 2+2").Scan(&value)
+	if err != nil {
+		return nil, datasource.ErrorDB{Err: err, Message: "error from sql db"}
+	}
+
+	return value, nil
 }

@@ -2,48 +2,39 @@ package task
 
 import (
 	"SQLTaskmanager_3layer/models"
+	"gofr.dev/pkg/gofr"
 )
 
-type Store interface {
-	Create(task models.Task, userID int) (models.Task, error)
-	GetById(userID int) ([]models.Task, error)
-	DeleteTaskById(id int) error
-	Update(task models.Task, taskID int) (models.Task, error)
-	GetAll() ([]models.Task, error)
-}
-
-type service struct {
+type Service struct {
 	store Store
 }
 
-func New(store Store) *service {
-	return &service{store: store}
+func New(store Store) *Service {
+	return &Service{store: store}
 }
 
-func (s *service) Create(task models.Task, userID int) (models.Task, error) {
-	err := task.Validate()
-	if err != nil {
+func (s *Service) Create(c *gofr.Context, task models.Task, userID int) (models.Task, error) {
+	if err := task.Validate(); err != nil {
 		return models.Task{}, err
 	}
-	return s.store.Create(task, userID)
+	return s.store.Create(c, task, userID)
 }
 
-func (s *service) GetById(userID int) ([]models.Task, error) {
-	return s.store.GetById(userID)
+func (s *Service) GetById(c *gofr.Context, userID int) ([]models.Task, error) {
+	return s.store.GetById(c, userID)
 }
 
-func (s *service) Delete(id int) error {
-	return s.store.DeleteTaskById(id)
+func (s *Service) DeleteTaskById(c *gofr.Context, id int) (int, error) {
+	return s.store.DeleteTaskById(c, id)
 }
 
-func (s *service) Update(task models.Task, taskID int) (models.Task, error) {
-	err := task.Validate()
-	if err != nil {
+func (s *Service) Update(c *gofr.Context, task models.Task, taskID int) (models.Task, error) {
+	if err := task.Validate(); err != nil {
 		return models.Task{}, err
 	}
-	return s.store.Update(task, taskID)
+	return s.store.Update(c, task, taskID)
 }
 
-func (s *service) GetAll() ([]models.Task, error) {
-	return s.store.GetAll()
+func (s *Service) GetAll(c *gofr.Context) ([]models.Task, error) {
+	return s.store.GetAll(c)
 }

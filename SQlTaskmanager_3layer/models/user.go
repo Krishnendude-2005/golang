@@ -11,5 +11,6 @@ func (u User) Validate() error {
 	if u.TaskName == "" {
 		return fmt.Errorf("user task name is required")
 	}
+
 	return nil
 }
